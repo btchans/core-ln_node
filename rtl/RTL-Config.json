@@ -1,0 +1,32 @@
+{
+  "multiPass": "password",
+  "port": "3000",
+  "defaultNodeIndex": 1,
+  "dbDirectoryPath": "/database",
+  "SSO": {
+    "rtlSSO": 0,
+    "rtlCookiePath": "",
+    "logoutRedirectLink": ""
+  },
+  "nodes": [
+    {
+      "index": 1,
+      "lnNode": "twntyone",
+      "lnImplementation": "CLN",
+      "Authentication": {
+        "macaroonPath": "/shared",
+        "configPath": "/lightningconfig"
+      },
+      "Settings": {
+        "userPersona": "OPERATOR",
+        "themeMode": "DAY",
+        "themeColor": "PURPLE",
+        "bitcoindConfigPath": "",
+        "logLevel": "INFO",
+        "fiatConversion": false,
+        "unannouncedChannels": false,
+        "lnServerUrl": "https://wireguard:3001"
+      }
+    }
+  ],
+}

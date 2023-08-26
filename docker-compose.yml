@@ -1,0 +1,123 @@
+version: '3'
+services:
+  wireguard:
+    image: linuxserver/wireguard
+    container_name: wireguard
+    restart: always
+    networks:
+      vps-wg:
+        ipv4_address: 172.32.0.2
+    volumes:
+      - './wireguard:/config'
+      - '/lib/modules:/lib/modules:ro'
+    ports:
+      - "0.0.0.0:3001:3001" #rest
+      - "0.0.0.0:9736:9735" #cln
+      - "0.0.0.0:5000:5000" #lnbits
+    cap_add:
+      - NET_ADMIN
+      #- SYS_MODULE
+    privileged: true
+    sysctls:
+      - "net.ipv4.conf.all.src_valid_mark=1"
+      - "net.ipv6.conf.all.disable_ipv6=1"
+
+  tor-proxy:
+    build: build/tor
+    container_name: tor-proxy
+    restart: unless-stopped
+    networks:
+      vps-wg:
+        ipv4_address: 172.32.0.6
+    ports:
+      - "9050:9050" # Tor proxy
+      - "9051:9051" # Tor control port
+
+  cln:
+    container_name: cln
+    restart: always
+    build: build/cln
+    depends_on:
+      tor-proxy:
+        condition: service_healthy
+    network_mode: service:wireguard
+    volumes:
+      - ./lightning:/root/.lightning
+      - ./bitcoin:/root/.bitcoin
+      - ./cln-rest/certs:/rest-plugin/certs
+      - ./backup:/backup-files
+
+  bitcoin:
+    container_name: bitcoind
+    image: lncm/bitcoind:v25.0
+    networks:
+      vps-wg:
+        ipv4_address: 172.32.0.3
+    volumes:
+      - ./bitcoin:/data/.bitcoin
+    ports:
+      - "8332:8332"
+      - "8333:8333"
+    restart: always
+    stop_grace_period: 15m30s
+    command:
+      - -rpcbind=0.0.0.0
+      - -rpcallowip=0.0.0.0/0
+
+  lnbits:
+    container_name: lnbits
+    network_mode: service:wireguard
+    restart: always
+    depends_on:
+      cln:
+        condition: service_started
+    volumes:
+      - ./lnbits/data:/app/data
+      - ./lnbits/.env:/app/.env
+      - ./lightning/bitcoin/lightning-rpc:/lightning-rpc
+    image: lnbitsdocker/lnbits-legend
+
+  rtl:
+    container_name: rtl
+    image: shahanafarooqui/rtl:0.14.0
+    restart: unless-stopped
+    networks:
+      vps-wg:
+        ipv4_address: 172.32.0.5
+    depends_on:
+      - cln
+    volumes:
+      - ./cln-rest/certs:/shared:ro
+      - ./rtl/db:/database
+      - ./rtl/backup:/backup
+      - ./rtl/RTL-Config.json:/RTL/RTL-Config.json
+      - ./lightning/config:/lightningconfig:ro
+    ports:
+      - "3000:3000"
+
+  fulcrum:
+    container_name: fulcrum
+    image: cculianu/fulcrum:latest
+    depends_on: [bitcoin]
+    networks:
+      vps-wg:
+        ipv4_address: 172.32.0.4
+    ports:
+      - "50001:50001"
+      - "50002:50002"
+      - "50003:50003"
+      - "50004:50004"
+    volumes:
+      - ./fulcrum/fulcrum.conf:/fulcrum.conf
+      - ./fulcrum/db:/db
+      - ./bitcoin/.cookie:/.cookie
+    command: [ "Fulcrum", "/fulcrum.conf" ]
+
+networks:
+  vps-wg:
+    name: vps-wg
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.32.0.0/24
+        gateway: 172.32.0.1

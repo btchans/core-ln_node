@@ -1,0 +1,35 @@
+#### General
+alias=SuperFancyNodeName
+#rgb=ffffff
+network=bitcoin
+bitcoin-rpcconnect=172.32.0.3
+bitcoin-rpcport=8332
+log-level=info
+
+
+#### Connection
+bind-addr=0.0.0.0:9736
+#proxy=172.32.0.5:9050
+addr=statictor:172.32.0.6:9051/torport=9736
+always-use-proxy=false
+announce-addr=external-ip:9736
+
+
+#### Plugins ####
+
+##   cl-rest
+plugin=/rest-plugin/clrest.js
+rest-port=3001
+rest-docport=4001
+rest-protocol=https
+rest-bind=0.0.0.0
+rest-domain=external-ip
+
+##   watchtower
+plugin=/teos/watchtower-client
+
+##   clboss
+plugin=/clboss/clboss
+#clboss-zerobasefee=require
+#clboss-min-channel=1000000
+#clboss-max-channel=5500000
